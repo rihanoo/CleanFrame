@@ -25,6 +25,7 @@
     { id: 'applemusic', name: 'Apple Music', mark: true, appId: 'org.tizen.apple.apple-music' }
   ];
   var PRIMARY = PRIMARY_APPS.map(function (a) { return a.id; }), APPS = PRIMARY_APPS.slice(), ALPHA = [];
+  var REGIONAL_MARKS = { 'PyZfkXAf88.tv2sumoTizen': 'tv2', 'n8N84lD1cR.NRKTVBeta': 'nrk' };
   var WALLS = window.CleanFrameWallpapers || [{ id: 'misty', name: 'Misty coast', tone: 'light', ut: { tr: 'mist', br: 'mist' }, frostVeil: .20 }];
   var ADAPTIVE_INK = window.CleanFrameAdaptiveInk || {};
   WALLS.forEach(function (w) { w.ut = w.ut || { tr: 'light', br: 'light' }; w.frostVeil = w.frostVeil || .12; });
@@ -138,7 +139,8 @@
       + (maskSupport ? '<span class="mk" style="' + st + ';-webkit-mask-image:url(' + ICONS + id + '.svg);mask-image:url(' + ICONS + id + '.svg)"></span>' : '<img alt="" src="' + ICONS + id + '.svg" style="' + st + '">') + '</span>';
   }
   function appMark(a, w, h, size) {
-    if (a.mark && (maskSupport || S.c.bg !== 'light')) return markHtml(a.brand || a.id, w, h, size);
+    var brand = REGIONAL_MARKS[a.appId] || a.brand;
+    if ((brand || a.mark) && (maskSupport || S.c.bg !== 'light')) return markHtml(brand || a.id, w, h, size);
     var words = a.name.split(/\s+/), letters = words[0].charAt(0) + (words.length > 1 ? words[1].charAt(0) : '');
     return '<span class="mark monogram' + (a.icon ? ' native-icon' : '') + '" style="width:' + w + 'px;height:' + h + 'px;font-size:' + Math.round(size * .65) + 'px"><span>' + esc(letters.toUpperCase()) + '</span>'
       + (a.icon ? '<img alt="" data-native-icon="true" src="' + esc(a.icon) + '">' : '') + '</span>';
@@ -1646,12 +1648,13 @@
   function matSrc(id, material) { return 'assets/materials/' + id + (material === 'soft' ? '-study-soft.jpg' : material === 'tint' ? '-field-clear.jpg' : '-field-frost.jpg'); }
   function fieldSrc(id, material) { return 'assets/materials/' + id + (material === 'soft' ? '-field-blur.jpg' : material === 'tint' ? '-field-clear.jpg' : '-field-frost.jpg'); }
   function makeImg(cls, src) { var im = document.createElement('img'); im.className = cls; im.alt = ''; im._src = src; im.src = src; return im; }
-  function whenReady(im, done) {
+  function whenReady(im, done, loadedOnly) {
     var fin = false, timer = setTimeout(function () { finish(!!(im.complete && im.naturalWidth)); }, document.hidden ? 20000 : 8000);
     function finish(ok) { if (fin) return; fin = true; clearTimeout(timer); done(ok); }
     function ready() {
-      // Hidden TV prelaunch may suspend decode even after a valid image loads.
-      if (document.hidden || !im.decode) { finish(true); return; }
+      // Startup must not wait for detached decode promises after valid loads.
+      // Hidden TV prelaunch can also suspend decode until the app is visible.
+      if (loadedOnly || document.hidden || !im.decode) { finish(true); return; }
       im.decode().then(function () { finish(true); }, function () { finish(!!(im.complete && im.naturalWidth)); });
     }
     if (im.complete) { if (im.naturalWidth) ready(); else finish(false); }
@@ -1659,7 +1662,7 @@
   }
   function swapImg(k, im) { var old = IMG[k]; if (old === im) return; im.style.cssText = old.style.cssText; if (old.id) im.id = old.id; old.parentNode.replaceChild(im, old); IMG[k] = im; }
   function bundleKey(look) { return look.wall + '|' + look.material; }
-  function loadBundle(look, token, done) {
+  function loadBundle(look, token, done, loadedOnly) {
     var imgs = { photo: makeImg('photo', WP + look.wall + '.jpg'), bg: makeImg('sheet-bg', WP + look.wall + '-panel.jpg') }, keys, left, allOk = true;
     imgs.mat = makeImg('mat-img', matSrc(look.wall, look.material));
     imgs.field = makeImg('ph-field-img', fieldSrc(look.wall, look.material));
@@ -1671,7 +1674,7 @@
       allOk = allOk && ok;
       if (--left || token !== wallToken) return;
       done(allOk ? { key: bundleKey(look), imgs: imgs } : null);
-    }); });
+    }, loadedOnly); });
   }
   function installBundle(bundle, look, previewOnly) {
     if (bundle) {
@@ -1743,7 +1746,7 @@
       loadBundle(target, token, function (bundle) {
         if (!bundle) { fail('load'); return; }
         loadedBundle = bundle; imageDone = true; complete();
-      });
+      }, !!opts.startup);
     }
     if (needsFont) ensureFont(target.font, function (ok, reason) {
       if (!ok) { fail('font', reason); return; }

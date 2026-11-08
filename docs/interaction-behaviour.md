@@ -91,6 +91,8 @@ The native Home operation and startup configuration from 19 October remain separ
 
 ## Clock and rendering
 
+Startup accepts each wallpaper image after a successful load without awaiting detached-image `decode()` promises. The complete bundle is still required before installation; later appearance changes retain their decode checks. This avoids an additional startup wait when a TV engine defers detached decoding. Browser checks cover remote direction and OK with decode promises held pending; physical launch timing still needs owner observation.
+
 Both layouts show the TV's local time in 12-hour format, without AM/PM or seconds. It updates at the minute boundary and on return to the launcher. No date or clock panel is shown.
 
 Photographic materials and blurred panel backgrounds are generated before packaging and stay aligned with the full-screen image. Photo colour and contrast metadata are also prepared offline. Navigation does not sample image pixels, run an optics engine or apply live backdrop blur. Flat backgrounds use matching light or dark panel colours. Focus feedback uses transforms and opacity; reduced motion removes animated scaling and movement while retaining opacity feedback.

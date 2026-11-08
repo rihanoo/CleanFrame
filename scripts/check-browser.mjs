@@ -263,6 +263,22 @@ try {
     await page({ seed: baseline({ mode: 'open' }), storageFailure: true });
     check('Failed open-mode write retains prior photo', (await state()).wallpaper === walls[0].id && (await stored()).wallpaper === walls[0].id);
   });
+  await run('Startup navigation does not wait for detached image decode', async () => {
+    await page({ waitReady: false, settleNetwork: false }, p => p.addInitScript(() => {
+      window.__startupDecodeCalls = 0;
+      HTMLImageElement.prototype.decode = function () {
+        window.__startupDecodeCalls++;
+        return new Promise(() => {});
+      };
+    }));
+    await current.waitForFunction(() => window.ShoreQA && ShoreQA.ready(), null, { timeout: 2000 });
+    check('Loaded startup images do not wait on detached decode promises', await current.evaluate(() => window.__startupDecodeCalls === 0));
+    const before = (await state()).selected;
+    await current.keyboard.press('ArrowRight');
+    check('Remote direction changes visible startup focus', (await state()).selected !== before && (await call('where')).focusCount === 1);
+    await current.keyboard.press('Enter');
+    check('Remote OK reaches the selected streaming app', (await state()).view === 'home' && await current.evaluate(() => window.__tv.calls.some(call => call.method === 'launch')));
+  });
   await run('Font recovery invalidates fallback measurements', async () => {
     const seed = baseline({ dock: ['sbs', 'netflix'], lastApp: 'sbs', look: { bg: 'photo', layout: 'list', apps: 'both', font: 'manrope', controls: 'both', focus: 'glass', material: 'soft' } });
     const geometry = () => current.evaluate(() => ({

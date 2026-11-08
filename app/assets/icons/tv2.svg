@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ffffff">
+  <title>TV 2</title>
+  <g transform="translate(3.16 1.04) scale(0.08)">
+    <path d="M0 110 C0 49.25 49.25 0 110 0 C171.25 0 221 49.25 221 110 V137 H165 V110 C165 78 141 52 110 52 C79 52 56 78 56 110 Z"/>
+    <path d="M75 137 H147 L72 222 H221 V274 H0 V222 Z"/>
+  </g>
+</svg>
